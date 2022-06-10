@@ -258,8 +258,8 @@ class zSQL {
 						}
 					}
 				}
-			} catch (Exception $e) {
-				$this->za->dbg($qu."\n".$e->getMessage());
+			} catch (\PDOException $e) {
+				$this->za->msg('err',$this->n,$qu."\n".$e->getMessage());
 			}
 			return ((is_array($re)&&count($re)>0)||!is_array($re))?$re:false;
 		} elseif($v) { // add
@@ -440,18 +440,17 @@ class zSQL {
 		$a = explode('/',str_replace(array('://',':','@'),'/',$a));
 		$this->prfx = $a[6];
 		// driver, login, password, host, port, db, prefix
-		
+
 		try {
-			$this->x = new \PDO($a[0].':host='.$a[3].(($a[4]>0)?':'.$a[4]:'').';dbname='.$a[5], $a[1], $a[2]);
-			$this->x->exec('set names utf8');
-			$this->x->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_SILENT);
-			// $this->x->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_EXCEPTION);
-			// $this->za->msg('ntf','db', 'start loading love.xml');
+			$this->x = new \PDO($a[0].':host='.$a[3].(($a[4]>0)?':'.$a[4]:'').';dbname='.$a[5], $a[1], $a[2],array( \PDO::ATTR_ERRMODE => \PDO::ERRMODE_SILENT, \PDO::MYSQL_ATTR_INIT_COMMAND => 'set names utf8' ));
+			// $this->x->exec('set names utf8');
+			// $this->x->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_SILENT);
+			// $this->za->msg('ntf','db', 'start initiate db');
 			$this->za->ee($this->n,array($this,'load'));
-		} catch(Exception $e) {
-			$this->za->msg('err', $this->n, $e->getMessage());
-			// $this->za->dbg($e->getMessage());
-			// $this->za->ee($this->n.'_ready');
+		} catch(\PDOException $e) {
+			$this->za->mm(array('vrs','e404'),true);
+			$this->za->msg('err', $this->n, 'connection error '.$a[3]);
+			$this->za->ee($this->n.'_ready');
 		}
 	}
 }
