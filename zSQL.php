@@ -1,6 +1,6 @@
 <?php
-
 // version: 1
+namespace za\zSQL;
 
 // ザガタ。六 /////////////////////////////////////////////////////
 ////////////////////////////////////////////////////////////////
@@ -15,12 +15,19 @@ class zSQL {
 
 		// define list of fields of main table
 		$this->r = array();
-		$tmp = $this->x->query('describe '.$this->prfx.'_r',PDO::FETCH_ASSOC);
-		foreach($tmp as $v) { $this->r[] = current($v); }
-		// fields of big table
-		$this->b = array('de','lid','imgti');
+		$qu = 'describe '.$this->prfx.'_r';
+		$re = $this->x->query($qu);
+		if($re) { 
+			$re = $re->fetchAll(\PDO::FETCH_ASSOC);
+			foreach($re as $v) { $this->r[] = current($v); }
+			// fields of big table
+			$this->b = array('de','lid','imgti');
 
-		$this->za->ee($this->n.'_ready');
+			$this->za->ee($this->n.'_ready');
+		} else {
+			$err = print_r($this->x->errorInfo(),true);
+			$this->za->msg('err',$this->n,$qu."\n".$err);
+		}
 	}
 	
 	private function save() {
@@ -40,7 +47,8 @@ class zSQL {
 			$sql.= ((!$r)?' and':' where').' ca="'.$idp.'"';
 		} else {}
 		
-		$tmp = $this->x->query($sql,PDO::FETCH_ASSOC);
+		   
+		$tmp = $this->x->query($sql,\PDO::FETCH_ASSOC);
 		foreach($tmp as $v) { return (int) current($v); }
 	return false;
 	}
@@ -56,9 +64,9 @@ class zSQL {
 	
 	public function q($qu,$add=true) {
 		$re = false;
-		try {
-			$re = $this->x->query($qu);
-			$re = $re->fetchall(PDO::FETCH_ASSOC);
+		$re = $this->x->query($qu);
+		if($re) {
+			$re = $re->fetchall(\PDO::FETCH_ASSOC);
 			// get things
 			if($add) {
 				$ids = array(); $ix = count($re);
@@ -67,7 +75,7 @@ class zSQL {
 					$ids = implode(',',$ids);
 					$qu = 'select idp,k,v from '.$this->prfx.'_s where idp in ('.$ids.') union select idp,k,v from '.$this->prfx.'_b where idp in ('.$ids.')';
 					$tmp = $this->x->query($qu);
-					$tmp = $tmp->fetchall(PDO::FETCH_ASSOC);
+					$tmp = $tmp->fetchall(\PDO::FETCH_ASSOC);
 					$iy = count($tmp);
 					if($iy>0) {
 						for($y=0;$y<$iy;$y++) {
@@ -78,8 +86,9 @@ class zSQL {
 					} else { }
 				} else { } 
 			} else { } 
-		} catch (Exception $e) {
-			$this->za->msg('err',$this->n,$qu."\n".$e->getMessage());
+		} else {
+			$err = print_r($this->x->errorInfo(),true);
+			$this->za->msg('err',$this->n,$qu."\n".$err);
 		}		
 	return ((is_array($re)&&count($re)>0)||!is_array($re))?$re:false;
 	}
@@ -91,8 +100,8 @@ class zSQL {
 		
 		$qu = 'select id,z from '.$this->prfx.'_r where (idx is NULL or idx!="*") and idp="'.$tmp['idp'].'" and z '.((($d=='upp'&&$this->sort=='asc')||($d=='dwn'&&$this->sort=='desc'))?'<':'>').' '.$tmp['z'].' order by z '.$this->sort.' limit 1';
 		$re = $this->x->query($qu);
-		$re = $re->fetchall(PDO::FETCH_ASSOC);
 		if($re) {
+			$re = $re->fetchall(\PDO::FETCH_ASSOC);
 			$re = $re[0];
 			$z = $re['z']; $re['z'] = $tmp['z']; $tmp['z'] = $z;
 
@@ -101,7 +110,10 @@ class zSQL {
 				$tmp = $this->qq($re['id'],array('id'=>$re['id'],'lbd'=>time(),'z'=>$re['z']));
 			} else { }
 			return $tmp;
-		} else { $this->za->msg('err',$this->n,'UpDwn: no place to go'); }
+		} else {
+			$err = print_r($this->x->errorInfo(),true);
+			$this->za->msg('err',$this->n,'UpDwn: no place to go '.$err); 
+		}
 	return false; 
 	}
 	
@@ -120,15 +132,13 @@ class zSQL {
 				} else {
 					$qu = 'id = "'.$v.'" ';
 				}
-				
-				// $this->za->dbg($qu);
 
 				// second _i deleting - first
-				$tmp = $this->x->query('delete from '.$this->prfx.'_b where idp in (select id from '.$this->prfx.'_r where '.trim($qu).')',PDO::FETCH_ASSOC);
+				$tmp = $this->x->query('delete from '.$this->prfx.'_b where idp in (select id from '.$this->prfx.'_r where '.trim($qu).')',\PDO::FETCH_ASSOC);
 				if($tmp!==false) {
-					$tmp = $this->x->query('delete from '.$this->prfx.'_s where idp in (select id from '.$this->prfx.'_r where '.trim($qu).')',PDO::FETCH_ASSOC);
+					$tmp = $this->x->query('delete from '.$this->prfx.'_s where idp in (select id from '.$this->prfx.'_r where '.trim($qu).')',\PDO::FETCH_ASSOC);
 					if($tmp!==false) {
-						$tmp = $this->x->query('delete from '.$this->prfx.'_r where '.trim($qu),PDO::FETCH_ASSOC);
+						$tmp = $this->x->query('delete from '.$this->prfx.'_r where '.trim($qu),\PDO::FETCH_ASSOC);
 						if($tmp==false) {
 							$this->za->msg('err',$this->n,'error deleting from _r');
 						} else { return true; }
@@ -149,7 +159,7 @@ class zSQL {
 				// $this->za->hdr();
 				$tmp = true;
 				$tmp_i = array();
-				$ttmp = $this->x->query('select distinct k from '.$this->prfx.'_s where idp='.$v['id'].' union select distinct k from '.$this->prfx.'_b where idp='.$v['id'],PDO::FETCH_ASSOC);
+				$ttmp = $this->x->query('select distinct k from '.$this->prfx.'_s where idp='.$v['id'].' union select distinct k from '.$this->prfx.'_b where idp='.$v['id'],\PDO::FETCH_ASSOC);
 				foreach($ttmp as $tv) { $tmp_i[] = current($tv); } unset($ttmp,$tv);
 
 				foreach($v as $kk=>$vv) {
@@ -157,9 +167,9 @@ class zSQL {
 						unset($v[$kk]);
 					} elseif(!in_array($kk,$this->r)) {
 						if(in_array($kk,$tmp_i)) {
-							$qu = 'update '.$this->prfx.'_'.((in_array($kk,$this->b))?'b':'s').' set v=:v where idp=:idp and k=:k ';
+							$qu = 'update '.$this->prfx.'_'.((in_array($kk,$this->b)||is_array($vv))?'b':'s').' set v=:v where idp=:idp and k=:k ';
 						} else {
-							$qu = 'insert into '.$this->prfx.'_'.((in_array($kk,$this->b))?'b':'s').' (idp,k,v) values (:idp,:k,:v)';
+							$qu = 'insert into '.$this->prfx.'_'.((in_array($kk,$this->b)||is_array($vv))?'b':'s').' (idp,k,v) values (:idp,:k,:v)';
 						}
 						$tmp = $this->x->prepare($qu);
 						// print($qu."\n");
@@ -169,18 +179,24 @@ class zSQL {
 						$tmp = $tmp->execute(array(':idp'=>$k,':k'=>$kk,':v'=>$vv));
 						unset($v[$kk]);
 						if($tmp===false) {
-							$this->za->msg('err',$this->n,'error updating _'.((in_array($kk,$this->b))?'b':'s'));
+							$this->za->msg('err',$this->n,'error updating _'.((in_array($kk,$this->b||is_array($vv)))?'b':'s'));
 							break;
 						} else {}
 					} else {}
 				}
 				if($tmp!=false) {
 					$qu = array();
-					foreach($v as $kk=>$vv) { $qu[] = $kk.((in_array($kk,array('pd','lbd','fd')))?(($vv)?'=from_unixtime('.$vv.')':'=null'):'="'.$vv.'"'); }
+					foreach($v as $kk=>$vv) { 
+						if($kk=='idp') {
+							$qu[] = $kk.'='.(($vv)?$vv:'null');
+						} else {
+							$qu[] = $kk.((in_array($kk,array('pd','lbd','fd')))?(($vv)?'=from_unixtime('.$vv.')':'=null'):'="'.$vv.'"'); 
+						}
+					}
 					$qu = 'update '.$this->prfx.'_r set '.implode(', ',$qu).' where id='.$k;
 					$tmp = $this->x->query($qu);
 					if($tmp===false) {
-						$this->za->msg('err',$this->n,'error updating _r');
+						$this->za->msg('err',$this->n,'error updating _r '.$qu);
 					} else { return true; }
 					// exit($this->x->asXML());
 					// $this->save();
@@ -213,7 +229,7 @@ class zSQL {
 
 			try {
 				$re = $this->x->query('select *, unix_timestamp(pd) as pd, unix_timestamp(lbd) as lbd, unix_timestamp(fd) as fd from '.$this->prfx.'_r where '.trim($qu));
-				$re = $re->fetchall(PDO::FETCH_ASSOC);
+				$re = $re->fetchall(\PDO::FETCH_ASSOC);
 				$ix = count($re); 
 				if($ix>0) {
 					$qu = array();
@@ -228,7 +244,7 @@ class zSQL {
 					}
 					$qu = 'select * from '.$this->prfx.'_s where idp '.((count($qu)==1)?'= '.$qu[0]:'in ('.implode(',',$qu).') ').' union select * from '.$this->prfx.'_b where idp '.((count($qu)==1)?'= '.$qu[0]:'in ('.implode(',',$qu).')');
 					$tre = $this->x->query($qu);
-					$tre = $tre->fetchall(PDO::FETCH_ASSOC);
+					$tre = $tre->fetchall(\PDO::FETCH_ASSOC);
 					$iy = count($tre);
 					for($i=0;$i<$ix;$i++) {
 						for($y=0;$y<$iy;$y++) {
@@ -242,23 +258,25 @@ class zSQL {
 						}
 					}
 				}
-			} catch (Exception $e) {
-				$this->za->dbg($qu."\n".$e->getMessage());
+			} catch (\PDOException $e) {
+				$this->za->msg('err',$this->n,$qu."\n".$e->getMessage());
 			}
 			return ((is_array($re)&&count($re)>0)||!is_array($re))?$re:false;
 		} elseif($v) { // add
 			try {
 				// ???
 				foreach($v as $kk=>$vv) {
+					$vv_arr = is_array($vv);
 					$vv = (is_array($vv))?addslashes(json_encode($vv)):addslashes($vv);
 					if(in_array($kk,array('dpd','dlbd','dfd','xpd','xlbd','xfd'))) {
 						unset($v[$kk]);
 					} elseif(!in_array($kk,$this->r)) {
-						$sql = 'insert into '.$this->prfx.'_'.((in_array($kk,$this->b))?'b':'s').' (idp,k,v) values ('.$v['id'].',"'.$kk.'", "'.$vv.'")';
+						$sql = 'insert into '.$this->prfx.'_'.((in_array($kk,$this->b)||$vv_arr)?'b':'s').' (idp,k,v) values ('.$v['id'].',"'.$kk.'", "'.$vv.'")';
 						$tmp = $this->x->query($sql);
 						unset($v[$kk]);
 						if($tmp===false) {
-							$this->za->msg('err',$this->n,'error inserting to _'.((in_array($kk,$this->b))?'b':'s'));
+							$err = print_r($this->x->errorInfo(),true);
+							$this->za->msg('err',$this->n,'error inserting to _'.((in_array($kk,$this->b)||$vv_arr)?'b':'s').' '.$err);
 							break;
 						} else {}
 					} else {}
@@ -273,7 +291,8 @@ class zSQL {
 					$tmp = $this->x->query($sql);
 					
 					if($tmp===false) {
-						$this->za->msg('err',$this->n,'error updating _r');
+						$err = print_r($this->x->errorInfo(),true);
+						$this->za->msg('err',$this->n,'error updating _r '.$err );
 					} else { return true; }
 					// exit($this->x->asXML());
 					// $this->save();
@@ -298,14 +317,14 @@ class zSQL {
 		$pg = (integer) $pg; $p = (integer) $p;
 		
 		$re = $this->x->query('select count(id) as coid from '.$this->prfx.'_r where ids="'.$k.'" and (pd is null or pd <= from_unixtime('.time().')) and (fd is null or fd > from_unixtime('.time().')) ');
-		$re = $re->fetchAll(PDO::FETCH_ASSOC);
+		$re = $re->fetchAll(\PDO::FETCH_ASSOC);
 		$ix = $re[0]['coid'];
 		$this->za->mm('vrs',array('pages'=>ceil($ix / $pg)));
 		
 		$qu = 'select *, unix_timestamp(pd) as pd, unix_timestamp(lbd) as lbd, unix_timestamp(fd) as fd from '.$this->prfx.'_r where ids="'.$k.'" and (pd is null or pd <= from_unixtime('.time().')) and (fd is null or fd > from_unixtime('.time().')) order by z '.$this->sort.' limit '.($pg*($p-1)).', '.$pg;
 		// $this->za->msg('ntf',$this->n,$qu);
 		$re = $this->x->query($qu);
-		$re = $re->fetchAll(PDO::FETCH_ASSOC);
+		$re = $re->fetchAll(\PDO::FETCH_ASSOC);
 		$ix = count($re); $qu = array();
 		for($i=0;$i<$ix;$i++) {
 			// additional info
@@ -333,7 +352,7 @@ class zSQL {
 			$this->za->hdr();
 			$qu = 'select * from '.$this->prfx.'_s where idp '.((count($qu)==1)?'= '.$qu[0]:'in ('.implode(',',$qu).') ').' union select * from '.$this->prfx.'_b where idp '.((count($qu)==1)?'= '.$qu[0]:'in ('.implode(',',$qu).')');
 			$tre = $this->x->query($qu);
-			$tre = $tre->fetchall(PDO::FETCH_ASSOC);
+			$tre = $tre->fetchall(\PDO::FETCH_ASSOC);
 			$iy = count($tre);
 			for($i=0;$i<$ix;$i++) {
 				for($y=0;$y<$iy;$y++) {
@@ -368,7 +387,7 @@ class zSQL {
 				$rs = 'r'; 
 			} else { 
 				$rs = (in_array($a[0],array('lid','de')))?'b':'s';
-				$this->a2q_ij[] = 'left join '.$this->prfx.'_s as '.$rs.$i.' on r.id = '.$rs.$i.'.idp and '.$rs.$i.'.k = "'.$a[0].'" '; 
+				$this->a2q_ij[] = 'inner join '.$this->prfx.'_s as '.$rs.$i.' on r.id = '.$rs.$i.'.idp and '.$rs.$i.'.k = "'.$a[0].'" '; 
 			}
 			$q = 'concat(",",'.$rs.'.'.$a[0].',",") like ",'.$a[2].',"';
 		} elseif($a[1]=='is'&&$a[2]=='null') {
@@ -376,6 +395,10 @@ class zSQL {
 			$i = count($this->a2q_ij);
 			$this->a2q_ij[] = 'left join '.$this->prfx.'_s as s'.$i.' on r.id = s'.$i.'.idp and s'.$i.'.k = "'.$a[0].'" ';
 			$q = 's'.$i.'.v '.$a[1].' '.$a[2];
+		} elseif($a[1]=='like') {
+			$i = count($this->a2q_ij);
+			$this->a2q_ij[] = 'left join '.$this->prfx.'_s as s'.$i.' on r.id = s'.$i.'.idp and s'.$i.'.k = "'.$a[0].'" ';
+			$q = 's'.$i.'.v like "'.$a[2].'" ';
 		} else {
 			$a[1] = str_replace(array('&&','&','||','|'),array('and','and','or', 'or'),trim($a[1]));
 			if(is_array($a[0])||in_array($a[0],$this->r)) {
@@ -384,7 +407,7 @@ class zSQL {
 			} else {
 				$i = count($this->a2q_ij);
 				$rs = (in_array($a[0],array('lid','de')))?'b':'s';
-				$this->a2q_ij[] = 'left join '.$this->prfx.'_'.$rs.' as '.$rs.$i.' on r.id = '.$rs.$i.'.idp and '.$rs.$i.'.k = "'.$a[0].'" ';
+				$this->a2q_ij[] = 'inner join '.$this->prfx.'_'.$rs.' as '.$rs.$i.' on r.id = '.$rs.$i.'.idp and '.$rs.$i.'.k = "'.$a[0].'" ';
 				$q = $rs.$i.'.v '.$a[1].' "'.$a[2].'"'; // looks it is kinda work
 			}
 		}
@@ -418,25 +441,25 @@ class zSQL {
 		$a = explode('/',str_replace(array('://',':','@'),'/',$a));
 		$this->prfx = $a[6];
 		// driver, login, password, host, port, db, prefix
-		
+
 		try {
-			$this->x = new PDO($a[0].':host='.$a[3].':'.$a[4].';dbname='.$a[5], $a[1], $a[2]);
-			$this->x->exec('set names utf8');
-			$this->x->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-			// $this->za->msg('ntf','db', 'start loading love.xml');
+			$this->x = new \PDO($a[0].':host='.$a[3].(($a[4]>0)?':'.$a[4]:'').';dbname='.$a[5], $a[1], $a[2],array( \PDO::ATTR_ERRMODE => \PDO::ERRMODE_SILENT, \PDO::MYSQL_ATTR_INIT_COMMAND => 'set names utf8' ));
+			// $this->x->exec('set names utf8');
+			// $this->x->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_SILENT);
+			// $this->za->msg('ntf','db', 'start initiate db');
 			$this->za->ee($this->n,array($this,'load'));
-		} catch(Exception $e) {
-			$this->za->msg('err', $this->n, $e->getMessage());
-			// exit($e->getMessage());
-			// $this->za->ee($this->n.'_ready');
+		} catch(\PDOException $e) {
+			$this->za->mm(array('vrs','e404'),true);
+			$this->za->msg('err', $this->n, 'connection error '.$a[3]);
+			$this->za->ee($this->n.'_ready');
 		}
 	}
 }
 
 ////////////////////////////////////////////////////////////////
 
-if(class_exists('zlo')) {
-	zlo::da('zSQL');
+if(class_exists('\zlo')) {
+	\zlo::da('zSQL');
 } elseif(realpath(__FILE__) == realpath($_SERVER['DOCUMENT_ROOT'].$_SERVER['SCRIPT_NAME'])) {
 	header("content-type: text/plain;charset=utf-8");
 	exit('zSQL');
