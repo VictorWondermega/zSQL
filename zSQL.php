@@ -376,7 +376,7 @@ class zSQL {
 		
 	return $re;
 	}
-	
+
 	private $a2q_ij = array();
 	public function a2q($a,$l=0) {
 		$q = '';
@@ -396,9 +396,13 @@ class zSQL {
 			$this->a2q_ij[] = 'left join '.$this->prfx.'_s as s'.$i.' on r.id = s'.$i.'.idp and s'.$i.'.k = "'.$a[0].'" ';
 			$q = 's'.$i.'.v '.$a[1].' '.$a[2];
 		} elseif($a[1]=='like') {
-			$i = count($this->a2q_ij);
-			$this->a2q_ij[] = 'left join '.$this->prfx.'_s as s'.$i.' on r.id = s'.$i.'.idp and s'.$i.'.k = "'.$a[0].'" ';
-			$q = 's'.$i.'.v like "'.$a[2].'" ';
+			if(is_array($a[0])||in_array($a[0],$this->r)) {
+				$q = "(".((is_array($a[0]))?$this->a2q($a[0],1):'r.'.$a[0]).' like \''.$a[2].'\')';
+			} else {
+				$i = count($this->a2q_ij);
+				$this->a2q_ij[] = 'left join '.$this->prfx.'_s as s'.$i.' on r.id = s'.$i.'.idp and s'.$i.'.k = "'.$a[0].'" ';
+				$q = 's'.$i.'.v like "'.$a[2].'" ';
+			}
 		} else {
 			$a[1] = str_replace(array('&&','&','||','|'),array('and','and','or', 'or'),trim($a[1]));
 			if(is_array($a[0])||in_array($a[0],$this->r)) {
@@ -429,7 +433,7 @@ class zSQL {
 		} else {}
 	return $q;
 	}
-	
+
 	/////////////////////////////// 
 	// ini
 	function __construct($za,$a=false,$n=false) {
