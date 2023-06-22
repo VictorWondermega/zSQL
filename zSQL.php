@@ -22,6 +22,11 @@ class zSQL {
 			foreach($re as $v) { $this->r[] = current($v); }
 			// fields of big table
 			$this->b = array('de','lid','imgti');
+			$re = $this->x->query('select distinct k from '.$this->prfx.'_b');
+			if($re) { 
+				$re = $re->fetchAll(\PDO::FETCH_ASSOC);
+				foreach($re as $v) { $this->b[] = current($v); }
+			} else {}
 
 			$this->za->ee($this->n.'_ready');
 		} else {
@@ -172,14 +177,14 @@ class zSQL {
 							$qu = 'insert into '.$this->prfx.'_'.((in_array($kk,$this->b)||is_array($vv))?'b':'s').' (idp,k,v) values (:idp,:k,:v)';
 						}
 						$tmp = $this->x->prepare($qu);
-						// print($qu."\n");
-						// $tmp = $this->x->query($qu);
+
 						if(is_array($vv)) { $vv = json_encode($vv); } else { }
-						// $this->za->msg('ntf',$this->n, $k.' '.$kk.' '.$vv);
-						$tmp = $tmp->execute(array(':idp'=>$k,':k'=>$kk,':v'=>$vv));
+
+						$tmpx = $tmp->execute(array(':idp'=>$k,':k'=>$kk,':v'=>$vv));
 						unset($v[$kk]);
-						if($tmp===false) {
-							$this->za->msg('err',$this->n,'error updating _'.((in_array($kk,$this->b||is_array($vv)))?'b':'s'));
+						if($tmpx===false) {
+							// $this->za->dbg($qu."\n\n\n\n".print_r(array(':idp'=>$k,':k'=>$kk,':v'=>$vv),true));
+							$this->za->msg('err',$this->n,print_r($tmp->errorInfo(),true).' error updating _'.((in_array($kk,$this->b)||is_array($vv))?'b':'s'));
 							break;
 						} else {}
 					} else {}
@@ -386,7 +391,7 @@ class zSQL {
 			if(in_array($a[0],$this->r)) { 
 				$rs = 'r'; 
 			} else { 
-				$rs = (in_array($a[0],array('lid','de')))?'b':'s';
+				$rs = (in_array($a[0],$this->b))?'b':'s';
 				$this->a2q_ij[] = 'inner join '.$this->prfx.'_s as '.$rs.$i.' on r.id = '.$rs.$i.'.idp and '.$rs.$i.'.k = "'.$a[0].'" '; 
 			}
 			$q = 'concat(",",'.$rs.'.'.$a[0].',",") like ",'.$a[2].',"';
@@ -400,8 +405,9 @@ class zSQL {
 				$q = "(".((is_array($a[0]))?$this->a2q($a[0],1):'r.'.$a[0]).' like \''.$a[2].'\')';
 			} else {
 				$i = count($this->a2q_ij);
-				$this->a2q_ij[] = 'left join '.$this->prfx.'_s as s'.$i.' on r.id = s'.$i.'.idp and s'.$i.'.k = "'.$a[0].'" ';
-				$q = 's'.$i.'.v like "'.$a[2].'" ';
+				$rs = (in_array($a[0],$this->b))?'b':'s';
+				$this->a2q_ij[] = 'left join '.$this->prfx.'_'.$rs.' as '.$rs.$i.' on r.id = '.$rs.$i.'.idp and '.$rs.$i.'.k = "'.$a[0].'" ';
+				$q = $rs.$i.'.v like "'.$a[2].'" ';
 			}
 		} else {
 			$a[1] = str_replace(array('&&','&','||','|'),array('and','and','or', 'or'),trim($a[1]));
@@ -410,7 +416,7 @@ class zSQL {
 				$q = "(".((is_array($a[0]))?$this->a2q($a[0],1):'r.'.$a[0])." ".$a[1]." ".((is_array($a[2]))?$this->a2q($a[2],1):$a[2]).")";
 			} else {
 				$i = count($this->a2q_ij);
-				$rs = (in_array($a[0],array('lid','de')))?'b':'s';
+				$rs = (in_array($a[0],$this->b))?'b':'s';
 				$this->a2q_ij[] = 'inner join '.$this->prfx.'_'.$rs.' as '.$rs.$i.' on r.id = '.$rs.$i.'.idp and '.$rs.$i.'.k = "'.$a[0].'" ';
 				$q = $rs.$i.'.v '.$a[1].' "'.$a[2].'"'; // looks it is kinda work
 			}
