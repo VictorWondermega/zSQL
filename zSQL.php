@@ -7,6 +7,9 @@ namespace za\zSQL;
 
 class zSQL {
 	/* Zagata.MySQL */
+	private $za = null;
+	public $n = '';
+
 	private $sort = 'asc';
 	private $limt = false;
 
