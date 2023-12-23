@@ -171,7 +171,7 @@ class zSQL {
 				foreach($ttmp as $tv) { $tmp_i[] = current($tv); } unset($ttmp,$tv);
 
 				foreach($v as $kk=>$vv) {
-					if(in_array($kk,array('dpd','dlbd','dfd','xpd','xlbd','xfd'))) {
+					if(in_array($kk,array('dpd','dlbd','dfd','xpd','xlbd','xfd'))||is_null($vv)) {
 						unset($v[$kk]);
 					} elseif(!in_array($kk,$this->r)) {
 						if(in_array($kk,$tmp_i)) {
