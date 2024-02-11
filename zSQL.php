@@ -10,6 +10,7 @@ class zSQL {
 	private $za = null;
 	public $n = '';
 
+	private $prfx = '';
 	private $sort = 'asc';
 	private $limt = false;
 
@@ -456,7 +457,7 @@ class zSQL {
 		// driver, login, password, host, port, db, prefix
 
 		try {
-			$this->x = new \PDO($a[0].':host='.$a[3].(($a[4]>0)?':'.$a[4]:'').';dbname='.$a[5], $a[1], $a[2],array( \PDO::ATTR_ERRMODE => \PDO::ERRMODE_SILENT, \PDO::MYSQL_ATTR_INIT_COMMAND => 'set names utf8' ));
+			$this->x = new \PDO($a[0].':host='.$a[3].(($a[4]>0)?':'.$a[4]:'').';dbname='.$a[5], $a[1], $a[2],array( \PDO::ATTR_ERRMODE => \PDO::ERRMODE_SILENT )); //, \PDO::MYSQL_ATTR_INIT_COMMAND => 'set names utf8' ));
 			// $this->x->exec('set names utf8');
 			// $this->x->setAttribute(\PDO::ATTR_ERRMODE, \PDO::ERRMODE_SILENT);
 			// $this->za->msg('ntf','db', 'start initiate db');
