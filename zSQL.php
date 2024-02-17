@@ -10,6 +10,10 @@ class zSQL {
 	private $za = null;
 	public $n = '';
 
+	private $x = null;
+	private $r = array();
+	private $b = array();
+
 	private $prfx = '';
 	private $sort = 'asc';
 	private $limt = false;
